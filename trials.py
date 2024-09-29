@@ -3,9 +3,12 @@ import sys
 from select import select 
 from os import path, system, chdir
 import random
+from collections import defaultdict
 
 register = np.zeros(26)
 register_names = [chr(ord('A') + i) for i in range(26)]
+
+session_results = defaultdict(list)
 
 def set_register(new_vals):
     for i, v in enumerate(new_vals):
@@ -109,7 +112,10 @@ class Trial:
             ind1 = random.choice(self.ind_range)
             ind2 = random.choice(self.ind_range)
             num = random.choice(range(10 + 10*self.level))
-            next_command = random.choice([AddTo(ind1, num), AddInto(ind1, ind2), MultBy(ind1, ind2), SetTo(ind1, num)])
+            next_command = np.random.choice(
+                [AddTo(ind1, num), AddInto(ind1, ind2), MultBy(ind1, ind2), SetTo(ind1, num)],
+                p=[0.4, 0.1, 0.1, 0.4], # Upweight nonzero initialization, reduce repeated squaring.
+                )
             next_query = Query(random.choice(self.ind_range))
             sequence.append(next_command)
             sequence.append(next_query)
@@ -123,23 +129,22 @@ class Trial:
                 set_register(np.ones(26) * self.level)
                 print("All registers have been initialized to " + str(self.level))
             if not round.run():
-                print("Failed round " + str(i)) 
+                print("Failed round " + str(i))
+                session_results[self.level].append(i)
                 return(False)
             print("Round " + str(i) + " passed.")
             print()
             set_register(np.zeros(26))
+        session_results[self.level].append(i+1)
         print("Trial passed!")
         return(True)
-
-
-
 
 
 def main():
     global register 
 
     # so we can access level.txt even if it's not in the current working directory
-    chdir("/home/cole/Desktop/Brain Training") 
+    chdir("/home/cwyeth/Brain-Training-Game") 
     
     while True:
         level = 0 
@@ -167,6 +172,11 @@ def main():
 
         set_register(np.zeros(26))
 
+    print("Session results:")
+    result_list = [(k,session_results[k]) for k in session_results.keys()]
+    result_list.sort(key=lambda x: x[0])
+    for level, results in result_list:
+        print(f"LEVEL {level}: {results}")
     print("Session ended")
 
 
